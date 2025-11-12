@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Conalep Puebla</title>
+  <link rel="stylesheet" href="https://img.pikbest.com/wp/202344/grainy-texture-of-abstract-dark-green-background_9932860.jpg!w700wp">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom right, #2e7d32, #66bb6a);
+      color: rgb(255, 255, 255);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-image: url('https://i.imgur.com/yourBackgroundImage.png'); /* opcional */
+      background-size: cover;
+      background-position: center;
+    }
+
+    .login-container {
+      background-color: rgba(48, 100, 28, 0.4);
+      padding: 30px;
+      border-radius: 12px;
+      width: 350px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    }
+
+    .logo-section {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .logo-section img {
+      height: 50px;
+      margin: 5px;
+    }
+
+    .login-container h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-weight: normal;
+    }
+
+    .input-group {
+      display: flex;
+      align-items: center;
+      background-color: white;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      padding: 8px 12px;
+      color: #333;
+    }
+
+    .input-group i {
+      margin-right: 10px;
+      font-size: 1.2em;
+    }
+
+    .input-group input {
+      border: none;
+      outline: none;
+      flex: 1;
+      font-size: 1em;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 10px;
+      background-color: #1b5e20;
+      border: none;
+      border-radius: 6px;
+      color: rgb(255, 255, 255);
+      font-size: 1em;
+      cursor: pointer;
+    }
+
+    .login-btn:hover {
+      background-color: #388e3c;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="logo-section">
+      <img src="https://cdn.freebiesupply.com/logos/large/2x/conalep-1-logo-png-transparent.png" alt="Conalep" width="90" height="90">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/8/8c/SEP_logo_2012.svg" alt="SEP">
+    </div>
+    <h2>Acceso al Sistema</h2>
+    <div class="input-group">
+      <i class="fas fa-user"></i>
+       <form action="https://open.spotify.com/intl-es" method="POST">
+    <label>Usuario:</label>
+    <input type="text" name="Liliana" required><br>
+    </div>
+    <div class="input-group">
+      <i class="fas fa-lock"></i>
+       <label>Contraseña:</label>
+    <input type="password" name="Equ1paz0" required><br>
+    </div>
+    <button class="login-btn">Iniciar sesión </button>
+  </div>
+</body>
+</html>
