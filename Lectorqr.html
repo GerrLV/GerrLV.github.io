@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lector de QR con cámara</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px; }
+    h1 { margin:0 0 10px; }
+    .card { background:white; border-radius:8px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+    .controls { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+    select, button { padding:8px 12px; font-size:14px; }
+    #reader { width:100%; max-width:420px; margin:auto; }
+    .log { margin-top:14px; font-size:14px; background:#fff; border:1px solid #ddd; border-radius:6px; padding:10px; }
+    .badge { display:inline-block; background:#0cb225; color:#fff; padding:4px 8px; border-radius:999px; font-size:12px; margin-left:8px; }
+    .status-ok { color:#0cb225; }
+    .status-err { color:#c0392b; }
+    .muted { color:#666; font-size:13px; }
+    @media (prefers-color-scheme: dark) {
+      body { background:#0f0f10; color:#eee; }
+      .card, .log { background:#191a1d; border-color:#333; }
+      select, button { background:#222; color:#eee; border:1px solid #444; }
+    }
+  </style>
+  <!-- Librería html5-qrcode -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+  <div class="card">
+    <h1>📷 Lector de QR <span class="badge">Cámara</span></h1>
+    <p class="muted">Permite escanear códigos QR desde la cámara del dispositivo. Recomendado usar HTTPS o localhost para permisos.</p>
+
+    <div class="controls">
+      <label for="cameraSelect"><strong>Cámara:</strong></label>
+      <select id="cameraSelect"></select>
+
+      <button id="startBtn">Iniciar</button>
+      <button id="stopBtn" disabled>Detener</button>
+
+      <label for="fps"><strong>FPS:</strong></label>
+      <select id="fps">
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+        <option value="15">15</option>
+      </select>
+
+      <label for="qrbox"><strong>Cuadro QR:</strong></label>
+      <select id="qrbox">
+        <option value="200">200</option>
+        <option value="250" selected>250</option>
+        <option value="300">300</option>
+      </select>
+    </div>
+
+    <div id="reader"></div>
+
+    <div class="log" id="log">
+      <p><strong>Estado:</strong> <span id="status" class="status-err">Detenido</span></p>
+      <p><strong>Último QR:</strong> <span id="lastQr" class="muted">N/A</span></p>
+      <p><strong>Mensajes:</strong></p>
+      <ul id="messages" style="margin:6px 0 0 18px;"></ul>
+    </div>
+  </div>
+
+  <script>
+    const cameraSelect = document.getElementById("cameraSelect");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn  = document.getElementById("stopBtn");
+    const statusEl = document.getElementById("status");
+    const lastQrEl = document.getElementById("lastQr");
+    const messages = document.getElementById("messages");
+    const fpsSel   = document.getElementById("fps");
+    const qrboxSel = document.getElementById("qrbox");
+
+    let html5QrCode = null;
+    let isRunning = false;
+    let lastDecoded = null;
+    let lastTime = 0;
+    const debounceMs = 1500; // evita duplicados por re-lecturas rápidas
+
+    function log(msg, type = "info") {
+      const li = document.createElement("li");
+      li.textContent = msg;
+      if (type === "ok") li.style.color = "#0cb225";
+      if (type === "err") li.style.color = "#c0392b";
+      messages.prepend(li);
+    }
+
+    // Cargar lista de cámaras
+    Html5Qrcode.getCameras()
+      .then(devices => {
+        if (!devices || devices.length === 0) {
+          log("No se encontraron cámaras disponibles.", "err");
+          return;
+        }
+        devices.forEach((d, i) => {
+          const opt = document.createElement("option");
+          opt.value = d.id;
+          opt.textContent = d.label || `Cámara ${i+1}`;
+          cameraSelect.appendChild(opt);
+        });
+        // Selecciona la primera por defecto
+        cameraSelect.value = devices[0].id;
+        log(`Cámaras detectadas: ${devices.length}`, "ok");
+      })
+      .catch(err => {
+        log("Error al obtener cámaras: " + err, "err");
+      });
+
+    // Iniciar lectura
+    startBtn.addEventListener("click", async () => {
+      if (isRunning) return;
+      try {
+        const fps = parseInt(fpsSel.value, 10);
+        const qrbox = parseInt(qrboxSel.value, 10);
+
+        html5QrCode = new Html5Qrcode("reader");
+        await html5QrCode.start(
+          { deviceId: { exact: cameraSelect.value } },
+          { fps, qrbox },
+          onScanSuccess,
+          onScanFailure
+        );
+        isRunning = true;
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        statusEl.textContent = "Escaneando…";
+        statusEl.className = "status-ok";
+        log("Lector iniciado.", "ok");
+      } catch (e) {
+        log("No se pudo iniciar la cámara: " + e, "err");
+      }
+    });
+
+    // Detener lectura
+    stopBtn.addEventListener("click", async () => {
+      if (!isRunning || !html5QrCode) return;
+      try {
+        await html5QrCode.stop();
+        await html5QrCode.clear();
+      } catch (e) {
+        log("Error al detener la cámara: " + e, "err");
+      } finally {
+        isRunning = false;
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        statusEl.textContent = "Detenido";
+        statusEl.className = "status-err";
+        log("Lector detenido.", "info");
+      }
+    });
+
+    // Éxito de escaneo
+    async function onScanSuccess(decodedText, decodedResult) {
+      const now = Date.now();
+      if (decodedText === lastDecoded && (now - lastTime) < debounceMs) {
+        return; // ignora re-lectura inmediata
+      }
+      lastDecoded = decodedText;
+      lastTime = now;
+
+      lastQrEl.textContent = decodedText;
+      log("QR leído: " + decodedText, "ok");
+
+      // Ejemplo: enviar al servidor (ajusta URL y parámetros a tu backend)
+      // Si tu QR lleva {matricula, nombre, grupo} en JSON, parsea y envía.
+      try {
+        // Intentar parsear JSON del QR (opcional)
+        let payload = null;
+        try { payload = JSON.parse(decodedText); } catch (e) {}
+        const params = payload ? new URLSearchParams(payload) : new URLSearchParams({ matricula: decodedText });
+
+        const resp = await fetch("registrar.php?" + params.toString(), { method: "GET" });
+        const text = await resp.text();
+        log("Servidor: " + text, resp.ok ? "ok" : "err");
+      } catch (e) {
+        log("No se pudo enviar al servidor: " + e, "err");
+      }
+    }
+
+    // Fallo de escaneo (ruido de cámara está bien ignorarlo)
+    function onScanFailure(error) {
+      // Evitar spam en el log: descomenta si quieres ver errores frecuentes.
+      // log("Fallo de escaneo: " + error, "err");
+    }
+  </script>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>Consejos de uso</h2>
+    <ul>
+      <li><strong>Permisos:</strong> Prueba en HTTPS o en localhost para que el navegador otorgue acceso a la cámara.</li>
+      <li><strong>Iluminación:</strong> Asegura buena luz y enfoque; ajusta el tamaño del cuadro QR si es necesario.</li>
+      <li><strong>Cámaras múltiples:</strong> Usa el selector para cambiar entre frontal y trasera.</li>
+      <li><strong>Backend:</strong> Ajusta la URL y parámetros del fetch para registrar la asistencia como lo necesites.</li>
+    </ul>
+  </div>
+</body>
+</html>
